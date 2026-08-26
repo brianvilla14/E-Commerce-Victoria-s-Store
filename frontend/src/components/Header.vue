@@ -18,9 +18,9 @@
         <button class="search-btn" aria-label="Buscar productos">
           <span>🔍</span>
         </button>
-        <button class="cart-btn" aria-label="Ver carrito">
+        <button class="cart-btn" @click="isCartOpen = true" aria-label="Ver carrito">
           <span>🛒</span>
-          <span class="cart-count">0</span>
+          <span v-if="totalCount > 0" class="cart-count">{{ totalCount }}</span>
         </button>
         <button class="theme-btn" @click="toggleDarkMode" :aria-label="isDarkMode ? 'Modo claro' : 'Modo oscuro'">
           <span>{{ isDarkMode ? '☀️' : '🌙' }}</span>
@@ -36,8 +36,10 @@
 <script setup>
 import { RouterLink } from 'vue-router'
 import { useDarkMode } from '../composables/useDarkMode'
+import { useCart } from '../composables/useCart'
 
 const { isDarkMode, toggleDarkMode } = useDarkMode()
+const { totalCount, isCartOpen } = useCart()
 </script>
 
 <style scoped>

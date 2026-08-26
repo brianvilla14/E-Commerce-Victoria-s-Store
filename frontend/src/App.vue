@@ -1,10 +1,12 @@
 <template>
   <RouterView />
+  <CartModal />
 </template>
 
 <script setup>
 import { RouterView } from 'vue-router'
 import { useDarkMode } from './composables/useDarkMode'
+import CartModal from './components/CartModal.vue'
 
 // Inicializar el tema al montar la app
 useDarkMode()

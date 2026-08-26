@@ -19,20 +19,52 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { api } from '../services/api'
+import { useCart } from '../composables/useCart'
 
-const products = ref([
-  { id: 1, name: 'Perfume Elegancia', description: 'Aroma exclusivo y duradero', price: 89.99, icon: '🌸' },
-  { id: 2, name: 'Bolsa Premium', description: 'Diseño minimalista y funcional', price: 129.99, icon: '👜' },
-  { id: 3, name: 'Joyería Artesanal', description: 'Piezas únicas de plata', price: 149.99, icon: '💎' },
-  { id: 4, name: 'Zapatos Confort', description: 'Comodidad para todo el día', price: 99.99, icon: '👠' },
-  { id: 5, name: 'Sombrilla Elegante', description: 'Protección con estilo', price: 59.99, icon: '☂️' },
-  { id: 6, name: 'Cinturón Sofisticado', description: 'Detalle que marca diferencia', price: 74.99, icon: '⏱️' },
-])
+const { addToCart } = useCart()
 
-const addToCart = (product) => {
-  alert(`${product.name} agregado al carrito`)
+const icons = ['🌸', '👜', '💎', '👠', '☂️', '⏱️', '✨', '👗']
+const products = ref([])
+const loading = ref(true)
+
+const loadProducts = async () => {
+  try {
+    loading.value = true
+    let data = await api.getProductos()
+    
+    // Si la base de datos está vacía, poblamos datos iniciales automáticamente
+    if (!data || data.length === 0) {
+      await api.poblarDatosIniciales()
+      data = await api.getProductos()
+    }
+
+    products.value = data.map((p, idx) => ({
+      id: p.id,
+      name: p.nombre,
+      description: p.descripcion,
+      price: p.precio,
+      icon: icons[idx % icons.length]
+    }))
+  } catch (error) {
+    console.warn('Backend no disponible o error de conexión, usando datos locales:', error)
+    products.value = [
+      { id: 1, name: 'Perfume Elegancia', description: 'Aroma exclusivo y duradero', price: 89.99, icon: '🌸' },
+      { id: 2, name: 'Bolsa Premium', description: 'Diseño minimalista y funcional', price: 129.99, icon: '👜' },
+      { id: 3, name: 'Joyería Artesanal', description: 'Piezas únicas de plata', price: 149.99, icon: '💎' },
+      { id: 4, name: 'Zapatos Confort', description: 'Comodidad para todo el día', price: 99.99, icon: '👠' },
+      { id: 5, name: 'Sombrilla Elegante', description: 'Protección con estilo', price: 59.99, icon: '☂️' },
+      { id: 6, name: 'Cinturón Sofisticado', description: 'Detalle que marca diferencia', price: 74.99, icon: '⏱️' },
+    ]
+  } finally {
+    loading.value = false
+  }
 }
+
+onMounted(() => {
+  loadProducts()
+})
 </script>
 
 <style scoped>
