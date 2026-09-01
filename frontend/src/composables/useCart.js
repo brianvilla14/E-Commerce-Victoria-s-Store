@@ -6,10 +6,21 @@ const isCartOpen = ref(false)
 const isSubmitting = ref(false)
 const orderSuccess = ref(null)
 
+const hasStockLimit = (item) => Number.isFinite(item.stock)
+
 export function useCart() {
   const addToCart = (product) => {
     const existing = cartItems.value.find(item => item.id === product.id)
+    const stock = Number(product.stock)
+
+    if (Number.isFinite(stock) && stock <= 0) {
+      return
+    }
+
     if (existing) {
+      if (hasStockLimit(existing) && existing.quantity >= existing.stock) {
+        return
+      }
       existing.quantity += 1
     } else {
       cartItems.value.push({
@@ -17,6 +28,7 @@ export function useCart() {
         name: product.name,
         price: Number(product.price),
         icon: product.icon || '🛍️',
+        stock: Number.isFinite(stock) ? stock : null,
         quantity: 1
       })
     }
@@ -26,7 +38,8 @@ export function useCart() {
   const updateQuantity = (productId, delta) => {
     const item = cartItems.value.find(i => i.id === productId)
     if (item) {
-      item.quantity += delta
+      const nextQuantity = item.quantity + delta
+      item.quantity = hasStockLimit(item) ? Math.min(nextQuantity, item.stock) : nextQuantity
       if (item.quantity <= 0) {
         removeFromCart(productId)
       }

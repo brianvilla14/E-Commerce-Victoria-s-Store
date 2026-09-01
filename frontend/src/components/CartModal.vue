@@ -23,11 +23,12 @@
             <div class="item-info">
               <h4>{{ item.name }}</h4>
               <p class="item-price">${{ item.price.toFixed(2) }} c/u</p>
+              <p v-if="item.stock !== null" class="item-stock">Stock: {{ item.stock }}</p>
             </div>
             <div class="item-qty">
               <button @click="updateQuantity(item.id, -1)">-</button>
               <span>{{ item.quantity }}</span>
-              <button @click="updateQuantity(item.id, 1)">+</button>
+              <button :disabled="item.stock !== null && item.quantity >= item.stock" @click="updateQuantity(item.id, 1)">+</button>
             </div>
             <button class="remove-btn" @click="removeFromCart(item.id)">🗑️</button>
           </div>
@@ -88,10 +89,10 @@ const {
 } = useCart()
 
 const form = ref({
-  nombre: 'Cristian Gómez',
-  email: 'cristian@example.com',
-  telefono: '1144556677',
-  domicilio: 'Av. Libertador 450',
+  nombre: '',
+  email: '',
+  telefono: '',
+  domicilio: '',
   metodoPago: 'Tarjeta de Crédito'
 })
 
@@ -201,6 +202,12 @@ const handleCheckout = async () => {
   color: var(--text-secondary);
 }
 
+.item-stock {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
 .item-qty {
   display: flex;
   align-items: center;
@@ -218,6 +225,11 @@ const handleCheckout = async () => {
   align-items: center;
   justify-content: center;
   font-weight: bold;
+}
+
+.item-qty button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .remove-btn {

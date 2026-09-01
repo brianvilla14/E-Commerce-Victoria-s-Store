@@ -1,83 +1,80 @@
-﻿const API_URL = 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api'
+
+async function request(path, options = {}) {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...options.headers
+    }
+  })
+
+  const contentType = res.headers.get('content-type') || ''
+  const payload = contentType.includes('application/json') ? await res.json() : null
+
+  if (!res.ok) {
+    throw new Error(payload?.mensaje || payload?.message || `Error HTTP ${res.status}`)
+  }
+
+  return payload
+}
 
 export const api = {
   // Productos
   async getProductos() {
-    const res = await fetch(`${API_URL}/productos`);
-    if (!res.ok) throw new Error('Error al obtener productos');
-    return await res.json();
+    return request('/productos')
   },
 
   async getProductoById(id) {
-    const res = await fetch(`${API_URL}/productos/${id}`);
-    if (!res.ok) throw new Error('Error al obtener producto');
-    return await res.json();
+    return request(`/productos/${id}`)
   },
 
   async crearProducto(producto) {
-    const res = await fetch(`${API_URL}/productos`, {
+    return request('/productos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(producto),
-    });
-    if (!res.ok) throw new Error('Error al crear producto');
-    return await res.json();
+      body: JSON.stringify(producto)
+    })
   },
 
   async actualizarProducto(id, producto) {
-    const res = await fetch(`${API_URL}/productos/${id}`, {
+    return request(`/productos/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(producto),
-    });
-    if (!res.ok) throw new Error('Error al actualizar producto');
-    return await res.json();
+      body: JSON.stringify(producto)
+    })
   },
 
   async eliminarProducto(id) {
-    const res = await fetch(`${API_URL}/productos/${id}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) throw new Error('Error al eliminar producto');
-    return true;
+    await request(`/productos/${id}`, {
+      method: 'DELETE'
+    })
+    return true
   },
 
   async poblarDatosIniciales() {
-    const res = await fetch(`${API_URL}/productos/seed`, { method: 'POST' });
-    return await res.json();
+    return request('/productos/seed', { method: 'POST' })
   },
 
   // Ventas / Pedidos
   async getVentas() {
-    const res = await fetch(`${API_URL}/ventas`);
-    if (!res.ok) throw new Error('Error al obtener pedidos');
-    return await res.json();
+    return request('/ventas')
   },
 
   async crearVenta(venta) {
-    const res = await fetch(`${API_URL}/ventas`, {
+    return request('/ventas', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(venta),
-    });
-    if (!res.ok) throw new Error('Error al registrar pedido');
-    return await res.json();
+      body: JSON.stringify(venta)
+    })
   },
 
   async actualizarEstadoVenta(id, estado) {
-    const res = await fetch(`${API_URL}/ventas/${id}/estado`, {
+    return request(`/ventas/${id}/estado`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado }),
-    });
-    if (!res.ok) throw new Error('Error al actualizar estado del pedido');
-    return await res.json();
+      body: JSON.stringify({ estado })
+    })
   },
 
   // Estadísticas Dashboard
   async getStats() {
-    const res = await fetch(`${API_URL}/stats`);
-    if (!res.ok) throw new Error('Error al obtener estadísticas');
-    return await res.json();
-  },
-};
+    return request('/stats')
+  }
+}

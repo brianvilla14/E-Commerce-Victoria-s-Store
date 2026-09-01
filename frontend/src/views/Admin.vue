@@ -34,7 +34,7 @@
       <div class="admin-header">
         <h1>{{ getTabTitle }}</h1>
         <div class="header-actions">
-          <input type="search" placeholder="Buscar..." class="search-box" />
+          <input v-model.trim="searchQuery" type="search" placeholder="Buscar..." class="search-box" />
           <button class="action-btn">⚙️ Configuración</button>
         </div>
       </div>
@@ -72,10 +72,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="products.length === 0">
+            <tr v-if="filteredProducts.length === 0">
               <td colspan="7" style="text-align: center; padding: 2rem;">No hay productos registrados</td>
             </tr>
-            <tr v-for="product in products" :key="product.id">
+            <tr v-for="product in filteredProducts" :key="product.id">
               <td>{{ product.id }}</td>
               <td>{{ product.name }}</td>
               <td>{{ product.brand || '-' }}</td>
@@ -115,7 +115,7 @@
           <div v-for="order in filteredOrders" :key="order.id" class="order-card">
             <div class="order-header">
               <span class="order-id">Orden #{{ order.id }}</span>
-              <span :class="['order-status', order.status.toLowerCase()]">{{ order.status }}</span>
+              <span :class="['order-status', statusClass(order.status)]">{{ order.status }}</span>
             </div>
             <div class="order-details">
               <p><strong>Cliente:</strong> {{ order.customer }}</p>
@@ -208,6 +208,7 @@ const router = useRouter()
 const { user, logout } = useAuth()
 const currentTab = ref('dashboard')
 const orderFilter = ref('Todos')
+const searchQuery = ref('')
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -307,6 +308,17 @@ const filteredOrders = computed(() => {
   return orders.value.filter(o => o.status.toLowerCase() === orderFilter.value.toLowerCase())
 })
 
+const filteredProducts = computed(() => {
+  const term = searchQuery.value.toLowerCase()
+  if (!term) return products.value
+
+  return products.value.filter(product => {
+    return [product.name, product.brand, product.description]
+      .filter(Boolean)
+      .some(value => value.toLowerCase().includes(term))
+  })
+})
+
 const openModal = (product = null) => {
   if (product) {
     editingProduct.value = product
@@ -337,6 +349,16 @@ const closeModal = () => {
 
 const saveProduct = async () => {
   try {
+    if (productForm.value.precio <= 0) {
+      alert('El precio debe ser mayor a 0')
+      return
+    }
+
+    if (productForm.value.stock < 0) {
+      alert('El stock no puede ser negativo')
+      return
+    }
+
     if (editingProduct.value) {
       await api.actualizarProducto(editingProduct.value.id, productForm.value)
     } else {
@@ -376,6 +398,10 @@ const getTabTitle = computed(() => {
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('es-ES')
+}
+
+const statusClass = (status) => {
+  return String(status || 'Pendiente').toLowerCase()
 }
 
 const handleLogout = () => {
@@ -662,6 +688,7 @@ const handleLogout = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border-collapse: collapse;
   transition: background 0.3s ease;
+  width: 100%;
 }
 
 .products-table thead {
@@ -799,14 +826,24 @@ const handleLogout = () => {
   color: #155724;
 }
 
-.order-status.Pendiente {
+.order-status.pendiente {
   background: #fff3cd;
   color: #856404;
 }
 
-.order-status.Enviado {
+.order-status.enviado {
   background: #d1ecf1;
   color: #0c5460;
+}
+
+.order-status.entregado {
+  background: #d4edda;
+  color: #155724;
+}
+
+.order-status.cancelado {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .order-details p {

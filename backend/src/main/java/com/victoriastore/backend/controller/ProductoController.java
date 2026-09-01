@@ -4,6 +4,7 @@ import com.victoriastore.backend.model.Producto;
 import com.victoriastore.backend.model.Stock;
 import com.victoriastore.backend.repository.ProductoRepository;
 import com.victoriastore.backend.repository.StockRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,9 +48,16 @@ public class ProductoController {
     }
 
     @PostMapping
-    public ResponseEntity<Producto> crearProducto(@RequestBody ProductoRequest req) {
+    public ResponseEntity<?> crearProducto(@RequestBody ProductoRequest req) {
+        String error = validarProducto(req, true);
+        if (error != null) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", error));
+        }
+
         Producto producto = new Producto(req.nombre, req.marca, req.descripcion, req.precio);
-        Stock stock = new Stock(producto, req.disponible != null ? req.disponible : true, req.stock != null ? req.stock : 0);
+        int cantidad = req.stock != null ? req.stock : 0;
+        boolean disponible = req.disponible != null ? req.disponible : cantidad > 0;
+        Stock stock = new Stock(producto, disponible, cantidad);
         producto.setStock(stock);
 
         Producto guardado = productoRepository.save(producto);
@@ -57,7 +65,12 @@ public class ProductoController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Producto> actualizarProducto(@PathVariable Integer id, @RequestBody ProductoRequest req) {
+    public ResponseEntity<?> actualizarProducto(@PathVariable Integer id, @RequestBody ProductoRequest req) {
+        String error = validarProducto(req, false);
+        if (error != null) {
+            return ResponseEntity.badRequest().body(Map.of("mensaje", error));
+        }
+
         return productoRepository.findById(id).map(prod -> {
             if (req.nombre != null) prod.setNombre(req.nombre);
             if (req.marca != null) prod.setMarca(req.marca);
@@ -66,9 +79,15 @@ public class ProductoController {
 
             if (prod.getStock() != null) {
                 if (req.stock != null) prod.getStock().setCantidad(req.stock);
-                if (req.disponible != null) prod.getStock().setDisponible(req.disponible);
+                if (req.disponible != null) {
+                    prod.getStock().setDisponible(req.disponible);
+                } else if (req.stock != null) {
+                    prod.getStock().setDisponible(req.stock > 0);
+                }
             } else if (req.stock != null || req.disponible != null) {
-                Stock stock = new Stock(prod, req.disponible != null ? req.disponible : true, req.stock != null ? req.stock : 0);
+                int cantidad = req.stock != null ? req.stock : 0;
+                boolean disponible = req.disponible != null ? req.disponible : cantidad > 0;
+                Stock stock = new Stock(prod, disponible, cantidad);
                 prod.setStock(stock);
             }
 
@@ -79,8 +98,12 @@ public class ProductoController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarProducto(@PathVariable Integer id) {
         if (productoRepository.existsById(id)) {
-            productoRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
+            try {
+                productoRepository.deleteById(id);
+                return ResponseEntity.noContent().build();
+            } catch (DataIntegrityViolationException e) {
+                return ResponseEntity.status(409).build();
+            }
         }
         return ResponseEntity.notFound().build();
     }
@@ -114,5 +137,19 @@ public class ProductoController {
         r.stock = stock;
         r.disponible = stock > 0;
         return r;
+    }
+
+    private String validarProducto(ProductoRequest req, boolean crear) {
+        if (req == null) return "Los datos del producto son requeridos";
+        if (crear && isBlank(req.nombre)) return "El nombre del producto es requerido";
+        if (req.nombre != null && isBlank(req.nombre)) return "El nombre del producto no puede estar vacío";
+        if (crear && req.precio == null) return "El precio del producto es requerido";
+        if (req.precio != null && req.precio.compareTo(BigDecimal.ZERO) <= 0) return "El precio debe ser mayor a 0";
+        if (req.stock != null && req.stock < 0) return "El stock no puede ser negativo";
+        return null;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

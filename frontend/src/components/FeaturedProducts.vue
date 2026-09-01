@@ -2,15 +2,23 @@
   <section class="featured">
     <div class="featured-container">
       <h2>Productos Destacados</h2>
-      
+
+      <p v-if="loading" class="state-text">Cargando productos...</p>
+      <p v-else-if="errorMessage" class="state-text">{{ errorMessage }}</p>
+
       <div class="products-grid">
         <article v-for="product in products" :key="product.id" class="product-card">
           <div class="product-image">{{ product.icon }}</div>
           <h3>{{ product.name }}</h3>
           <p class="product-description">{{ product.description }}</p>
+          <p :class="['stock-label', product.stock > 0 ? 'available' : 'unavailable']">
+            {{ product.stock > 0 ? `${product.stock} disponibles` : 'Sin stock' }}
+          </p>
           <div class="product-footer">
             <span class="price">${{ product.price }}</span>
-            <button class="add-btn" @click="addToCart(product)">Agregar</button>
+            <button class="add-btn" :disabled="product.stock <= 0" @click="addToCart(product)">
+              {{ product.stock > 0 ? 'Agregar' : 'No disponible' }}
+            </button>
           </div>
         </article>
       </div>
@@ -28,10 +36,12 @@ const { addToCart } = useCart()
 const icons = ['🌸', '👜', '💎', '👠', '☂️', '⏱️', '✨', '👗']
 const products = ref([])
 const loading = ref(true)
+const errorMessage = ref('')
 
 const loadProducts = async () => {
   try {
     loading.value = true
+    errorMessage.value = ''
     let data = await api.getProductos()
     
     // Si la base de datos está vacía, poblamos datos iniciales automáticamente
@@ -45,17 +55,19 @@ const loadProducts = async () => {
       name: p.nombre,
       description: p.descripcion,
       price: p.precio,
+      stock: p.stock?.cantidad ?? 0,
       icon: icons[idx % icons.length]
     }))
   } catch (error) {
     console.warn('Backend no disponible o error de conexión, usando datos locales:', error)
+    errorMessage.value = 'Mostrando productos demo porque el backend no respondió.'
     products.value = [
-      { id: 1, name: 'Perfume Elegancia', description: 'Aroma exclusivo y duradero', price: 89.99, icon: '🌸' },
-      { id: 2, name: 'Bolsa Premium', description: 'Diseño minimalista y funcional', price: 129.99, icon: '👜' },
-      { id: 3, name: 'Joyería Artesanal', description: 'Piezas únicas de plata', price: 149.99, icon: '💎' },
-      { id: 4, name: 'Zapatos Confort', description: 'Comodidad para todo el día', price: 99.99, icon: '👠' },
-      { id: 5, name: 'Sombrilla Elegante', description: 'Protección con estilo', price: 59.99, icon: '☂️' },
-      { id: 6, name: 'Cinturón Sofisticado', description: 'Detalle que marca diferencia', price: 74.99, icon: '⏱️' },
+      { id: 1, name: 'Perfume Elegancia', description: 'Aroma exclusivo y duradero', price: 89.99, stock: 45, icon: '🌸' },
+      { id: 2, name: 'Bolsa Premium', description: 'Diseño minimalista y funcional', price: 129.99, stock: 12, icon: '👜' },
+      { id: 3, name: 'Joyería Artesanal', description: 'Piezas únicas de plata', price: 149.99, stock: 8, icon: '💎' },
+      { id: 4, name: 'Zapatos Confort', description: 'Comodidad para todo el día', price: 99.99, stock: 20, icon: '👠' },
+      { id: 5, name: 'Sombrilla Elegante', description: 'Protección con estilo', price: 59.99, stock: 15, icon: '☂️' },
+      { id: 6, name: 'Cinturón Sofisticado', description: 'Detalle que marca diferencia', price: 74.99, stock: 30, icon: '⏱️' },
     ]
   } finally {
     loading.value = false
@@ -107,6 +119,12 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
+}
+
+.state-text {
+  color: var(--text-secondary);
+  margin: -1.5rem 0 2rem;
+  text-align: center;
 }
 
 .product-card {
@@ -173,6 +191,20 @@ onMounted(() => {
   transition: color 0.3s ease;
 }
 
+.stock-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.stock-label.available {
+  color: #168a3f;
+}
+
+.stock-label.unavailable {
+  color: #b3261e;
+}
+
 .product-footer {
   display: flex;
   justify-content: space-between;
@@ -208,6 +240,13 @@ onMounted(() => {
   transform: scale(1.1);
   box-shadow: 0 6px 16px rgba(0, 188, 212, 0.4);
   background: linear-gradient(135deg, #00a8cc 0%, #0095b0 100%);
+}
+
+.add-btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+  opacity: 0.65;
+  transform: none;
 }
 
 @media (max-width: 768px) {
